@@ -39,22 +39,21 @@ const commands = [
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-
 const CLIENT_ID = '1499752839973441556';
 const GUILD_ID = '1499753585955704903';
 
-(async () => {
+// Export the function so index.js can call it
+async function deployCommands() {
     try {
-        console.log('Registering GLOBAL commands...');
-
+        console.log('Registering Guild commands...');
         await rest.put(
-            //Routes.applicationCommands(CLIENT_ID),
             Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
             { body: commands }
         );
-
-        console.log('Global commands registered!');
+        console.log('Guild commands registered successfully!');
     } catch (error) {
-        console.error(error);
+        console.error('Failed to register commands:', error);
     }
-})();
+}
+
+module.exports = { deployCommands };
