@@ -22,10 +22,8 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('DarkButNotBlack')
-                .setTitle("🏓 Pong!")
-                .addFields(
-                    { name: "Bot Latency", value: `${botLatency}ms`, inline: true },
-                )
+                .setTitle("Pong!")
+                .setDescription(`\`\`\`Bot Latency: ${botLatency}ms\nAPI Latency: ${apiLatency}ms\`\`\``)
 
             await interaction.editReply({
                 content: null,
