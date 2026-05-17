@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
     name: 'ping',
@@ -8,22 +8,20 @@ module.exports = {
 
     async execute(interaction) {
         try {
-
             const start = Date.now();
 
-            const sent = await interaction.reply({
+            await interaction.reply({
                 content: '```Pinging...```',
-                fetchReply: true
+                withResponse: true
             });
 
             const botLatency = Date.now() - start;
-
             const apiLatency = interaction.client.ws.ping;
 
             const embed = new EmbedBuilder()
                 .setColor('DarkButNotBlack')
                 .setTitle("Pong!")
-                .setDescription(`\`\`\`Bot Latency: ${botLatency}ms\nAPI Latency: ${apiLatency}ms\`\`\``)
+                .setDescription(`\`\`\`Bot Latency: ${botLatency}ms\nAPI Latency: ${apiLatency}ms\`\`\``);
 
             await interaction.editReply({
                 content: null,
@@ -36,12 +34,12 @@ module.exports = {
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({
                     content: 'An error occurred while executing this command.',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } else {
                 await interaction.reply({
                     content: 'An error occurred while executing this command.',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }

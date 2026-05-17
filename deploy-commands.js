@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { REST, Routes } = require('discord.js');
+const { description } = require('./commands/economy/balance');
 
 const commands = [
     {
@@ -92,6 +93,42 @@ const commands = [
             },
         ],
     },
+    {
+        name: 'market',
+        description: "View available system modules",
+        cooldown: 5,
+    },
+    {
+        name: 'buy',
+        description: "Purchase modules from the market",
+        cooldown: 5,
+        options: [
+            {
+                name: 'module_id',
+                required: true,
+                description: 'The ID of the module to buy',
+                type: 3,
+            },
+        ]
+    },
+    {
+        name: 'stash',
+        description: "Transfer cores into the vault",
+        cooldown: 5,
+        options: [
+            {
+                name: 'amount',
+                description: 'The amount to stash into vault',
+                required: true,
+                type: 4,
+            },
+        ],
+    },
+    {
+        name: 'exploit',
+        description: "Exploit a system",
+        cooldown: 25,
+    }
 ]
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);

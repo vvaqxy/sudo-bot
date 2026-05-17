@@ -1,6 +1,7 @@
 const db = require('../../db.js');
 const logger = require('../../logger.js');
-const { EmbedBuilder, Client } = require('discord.js');
+const redisClient = require('../../redis.js');
+const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'whitelist',
@@ -16,44 +17,57 @@ module.exports = {
     ],
 
     async execute(interaction) {
+        await interaction.deferReply();
         try {
-            await interaction.deferReply();
             const senderId = interaction.user.id;
             const showList = interaction.options.getBoolean('show_list');
+            
+            const whitelistCacheKey = `whitelist:${senderId}`;
 
-            await db.query('BEGIN');
+            const cachedWhitelist = await redisClient.get(whitelistCacheKey);
+            
+            let isWhitelisted = cachedWhitelist === 'true';
 
-            const status = await db.query(`SELECT is_whitelisted FROM users WHERE discord_id = $1`, [senderId]);
+            if (!cachedWhitelist) {
+                const status = await db.query(`SELECT is_whitelisted FROM users WHERE discord_id = $1`, [senderId]);
+                isWhitelisted = status.rows[0]?.is_whitelisted || false;
+
+                await redisClient.set(whitelistCacheKey, isWhitelisted.toString(), { EX: 300 });
+            }
+
             let responseMessage = "";
 
-            if (status.rows[0]?.is_whitelisted == true) {
+            if (isWhitelisted) {
                 responseMessage = 'You are already in the whitelist!';
             } else {
                 await db.query(`UPDATE users SET is_whitelisted = true WHERE discord_id = $1`, [senderId]);
+                await redisClient.set(whitelistCacheKey, 'true', { EX: 300 });
                 responseMessage = 'You have been added to the whitelist!';
             }
 
-            if (showList == true) {
+            if (showList) {
                 const result = await db.query('SELECT discord_id FROM users WHERE is_whitelisted = true');
-
                 const userList = result.rows.length > 0
-                    ? result.rows.map(row => `@${row.discord_id}`).join(`\n`)
-                    : 'No whitelisted users found'
+                    ? result.rows.map(row => `<@${row.discord_id}>`).join(`\n`)
+                    : 'No whitelisted users found';
 
                 const embed = new EmbedBuilder()
-                    .setTitle('Whitelisted Users: ')
+                    .setTitle('Whitelisted Users')
                     .setDescription(userList)
+                    .setColor(0x00AE86);
 
-                await interaction.editReply({content: responseMessage, embeds: [embed]});
+                await interaction.editReply({ content: responseMessage, embeds: [embed] });
             } else {
                 await interaction.editReply(responseMessage);
             }
 
-            await db.query('COMMIT');
         } catch (error) {
-            await db.query('ROLLBACK');
             logger.error(`Error in /whitelist: ${error.stack}`);
-            await interaction.editReply('Transaction failed. No coins were moved.');
+            if (!interaction.replied && !interaction.deferred) {
+                 await interaction.reply('An error occurred.');
+            } else {
+                 await interaction.editReply('Transaction failed.');
+            }
         }
     }
 }

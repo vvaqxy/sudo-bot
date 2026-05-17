@@ -7,6 +7,7 @@ const { checkCooldown } = require('./utils/cooldowns');
 const { deployCommands } = require('./deploy-commands');
 
 const db = require('./db.js');
+const redisClient = require('./redis.js');
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
@@ -42,7 +43,7 @@ client.on('interactionCreate', async interaction => {
     logger.logCommand(interaction);
 
     if (command.cooldown) {
-        const remaining = checkCooldown(
+        const remaining =  await checkCooldown(
             interaction.user.id,
             command.name,
             command.cooldown
@@ -69,20 +70,30 @@ client.on('interactionCreate', async interaction => {
         await command.execute(interaction);
     } catch (error) {
         logger.error(`Error executing /${interaction.commandName}: ${error.stack}`);
-        await interaction.reply({
-            content: 'Error executing command',
-            ephemeral: true
-        });
+        
+        const errorMessage = { content: 'Error executing command. The system gears are jammed.', flags: 64 };
+
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(errorMessage);
+        } else {
+            await interaction.reply(errorMessage);
+        }
     }
 });
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 
-    // Database Keep-Alive Ping
+     try {
+        await db.query('SELECT 1');
+        logger.info('[DB] Initial connection warm-up successful.');
+    } catch (err) {
+        logger.error(`[DB] Initial warm-up failed: ${err.message}`);
+    }
+
     setInterval(async () => {
         try {
-            await db.query('SELECT 1');
+            db.query('SELECT 1');
             logger.info('Database keep-alive ping successful.');
         } catch (err) {
             console.error('Database keep-alive failed:', err);
