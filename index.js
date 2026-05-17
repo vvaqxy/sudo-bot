@@ -3,11 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger.js');
 const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
-const { checkCooldown } = require('./utils/cooldowns');
 const { deployCommands } = require('./deploy-commands');
 
 const db = require('./db.js');
-const redisClient = require('./redis.js');
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]

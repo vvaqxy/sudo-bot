@@ -1,0 +1,33 @@
+[2026-05-17 20:50:35] [[31merror[39m]: Unhandled Rejection at: [object Promise] | Reason: DiscordjsError [TokenInvalid]: An invalid token was provided.
+[2026-05-17 20:50:55] [[32minfo[39m]: Received SIGINT. Starting graceful shutdown...
+[2026-05-17 20:50:59] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:51:13] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /ping in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:51:52] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:52:24] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:53:07] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:53:22] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /ping in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:53:22] [[31merror[39m]: Uncaught Exception thrown: ReferenceError: checkCooldown is not defined
+    at Client.<anonymous> (C:\Users\aqila\Desktop\Sudo bot\index.js:44:28)
+    at Client.emit (node:events:509:28)
+    at InteractionCreateAction.handle (C:\Users\aqila\Desktop\Sudo bot\node_modules\discord.js\src\client\actions\InteractionCreate.js:103:12)
+    at module.exports [as INTERACTION_CREATE] (C:\Users\aqila\Desktop\Sudo bot\node_modules\discord.js\src\client\websocket\handlers\INTERACTION_CREATE.js:4:36)
+    at WebSocketManager.handlePacket (C:\Users\aqila\Desktop\Sudo bot\node_modules\discord.js\src\client\websocket\WebSocketManager.js:352:31)
+    at WebSocketManager.<anonymous> (C:\Users\aqila\Desktop\Sudo bot\node_modules\discord.js\src\client\websocket\WebSocketManager.js:236:12)
+    at WebSocketManager.emit (C:\Users\aqila\Desktop\Sudo bot\node_modules\@vladfrangu\async_event_emitter\dist\index.cjs:2504:31)
+    at WebSocketShard.<anonymous> (C:\Users\aqila\Desktop\Sudo bot\node_modules\@discordjs\ws\dist\index.js:1190:51)
+    at WebSocketShard.emit (C:\Users\aqila\Desktop\Sudo bot\node_modules\@vladfrangu\async_event_emitter\dist\index.cjs:2504:31)
+    at WebSocketShard.onMessage (C:\Users\aqila\Desktop\Sudo bot\node_modules\@discordjs\ws\dist\index.js:1007:14)
+[2026-05-17 20:54:23] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:54:27] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /ping in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:54:37] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /say in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:54:49] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /fetch in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:54:49] [[31merror[39m]: Fetch Error: redisClient.get is not a function
+[2026-05-17 20:55:17] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 20:55:20] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /fetch in Guild "test new bot" (ID: 1070710331107725332)
+[2026-05-17 20:56:53] [[32minfo[39m]: [DB] Initial connection warm-up successful.
+[2026-05-17 21:00:53] [[32minfo[39m]: Database keep-alive ping successful.
+[2026-05-17 21:04:54] [[32minfo[39m]: Database keep-alive ping successful.
+[2026-05-17 21:08:54] [[32minfo[39m]: Database keep-alive ping successful.
+[2026-05-17 21:12:54] [[32minfo[39m]: Database keep-alive ping successful.
+[2026-05-17 21:16:54] [[32minfo[39m]: Database keep-alive ping successful.
+[2026-05-17 21:19:06] [[32minfo[39m]: Received SIGINT. Starting graceful shutdown...
