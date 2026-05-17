@@ -85,7 +85,7 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 
      try {
-        await db.query('SELECT 1');
+        db.query('SELECT 1');
         logger.info('[DB] Initial connection warm-up successful.');
     } catch (err) {
         logger.error(`[DB] Initial warm-up failed: ${err.message}`);
