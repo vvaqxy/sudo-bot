@@ -1,28 +1,30 @@
-const redisClient = require('../redis.js');
+const db = require('../db.js');
 
-/**
- * Checks if a user is on cooldown using Redis.
- * @param {string} userId - The Discord user ID
- * @param {string} commandName - The name of the command
- * @param {number} cooldownSeconds - Cooldown duration in seconds
- * @returns {Promise<string|null>} - Returns remaining time string if on cooldown, else null.
- */
 async function checkCooldown(userId, commandName, cooldownSeconds) {
-    const key = `cooldown:${commandName}:${userId}`;
+    try {
+        const query = `
+            INSERT INTO command_cooldowns (user_id, command_name, expires_at)
+            VALUES ($1, $2, NOW() + $3 * INTERVAL '1 second')
+            ON CONFLICT (user_id, command_name) 
+            DO UPDATE SET 
+                expires_at = CASE 
+                    WHEN command_cooldowns.expires_at < NOW() THEN EXCLUDED.expires_at
+                    ELSE command_cooldowns.expires_at
+                END
+            RETURNING (EXTRACT(EPOCH FROM (expires_at - NOW()))) AS remaining;
+        `;
 
-    const result = await redisClient.set(key, 'active', {
-        NX: true,
-        PX: cooldownSeconds * 1000
-    });
+        const response = await db.query(query, [userId, commandName, cooldownSeconds]);
+        const remainingSeconds = parseFloat(response.rows[0].remaining);
 
-    if (result === 'OK') {
+        if (remainingSeconds > 0) {
+            return remainingSeconds.toFixed(1);
+        }
+
+        return null;
+    } catch (error) {
         return null;
     }
-
-    const ttl = await redisClient.pTTL(key);
-    
-    const remaining = (ttl / 1000).toFixed(1);
-    return remaining;
 }
 
 module.exports = { checkCooldown };

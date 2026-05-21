@@ -1,5 +1,4 @@
 const db = require('../../db.js');
-const redisClient = require('../../redis.js');
 const logger = require('../../logger.js');
 const { EmbedBuilder } = require('discord.js');
 
@@ -17,13 +16,14 @@ module.exports = {
     ],
 
     async execute(interaction) {
+        await interaction.deferReply();
 
         const senderId = interaction.user.id;
         const botId = '1499752839973441556';
         const amount = interaction.options.getInteger('amount');
 
         if (amount <= 0) {
-            return interaction.reply("Amount must be greater than 0.");
+            return interaction.editReply("Amount must be greater than 0.");
         }
 
         try {
@@ -50,7 +50,7 @@ module.exports = {
                     )
                     .setFooter({text: 'Try stashing a small amount first'});
                         
-                return interaction.reply({ embeds: [embed] });
+                return interaction.editReply({ embeds: [embed] });
             }
         
             await db.query(`
@@ -69,14 +69,6 @@ module.exports = {
 
             const newWallet = senderData.coins - totalDeduction;
             const newVault = parseInt(senderData.vault) + amount;
-            const cacheKey = `profile:${senderId}`;
-            
-            const payload = JSON.stringify({
-                coins: newWallet,
-                vault: newVault
-            });
-
-            redisClient.set(cacheKey, payload, { EX: 360 }).catch(e => logger.error(e));
 
             const embed = new EmbedBuilder()
                 .setTitle('Transaction Successful')
@@ -93,11 +85,11 @@ module.exports = {
                         'A 10% network protocol fee applied, the taxed cores will be transfered to sudo bot account.'
                     });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
             logger.error(`Error in /stash: ${error.stack}`);
-            await interaction.reply('Transaction failed. System connection error.');
+            await interaction.editReply('Transaction failed. System connection error.');
         }
     }
 }

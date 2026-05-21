@@ -4,7 +4,6 @@ const path = require('path');
 const logger = require('./logger.js');
 const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
 const { deployCommands } = require('./deploy-commands');
-
 const db = require('./db.js');
 
 const client = new Client({
@@ -14,7 +13,6 @@ const client = new Client({
 client.commands = new Collection();
 client.maintenanceMode = false;
 
-// Load command files
 function loadCommands(dir) {
     const files = fs.readdirSync(dir);
     for (const file of files) {
@@ -39,21 +37,6 @@ client.on('interactionCreate', async interaction => {
     if (!command) return;
 
     logger.logCommand(interaction);
-
-    if (command.cooldown) {
-        const remaining =  await checkCooldown(
-            interaction.user.id,
-            command.name,
-            command.cooldown
-        );
-
-        if (remaining) {
-            return interaction.reply({
-                content: `Wait ${remaining}s before using this command again.`,
-                ephemeral: true
-            });
-        }
-    }
 
     if (command.permissions) {
         if (!interaction.member.permissions.has(command.permissions)) {
@@ -82,7 +65,7 @@ client.on('interactionCreate', async interaction => {
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 
-     try {
+    try {
         db.query('SELECT 1');
         logger.info('[DB] Initial connection warm-up successful.');
     } catch (err) {

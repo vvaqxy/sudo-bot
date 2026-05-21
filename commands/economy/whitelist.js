@@ -1,7 +1,20 @@
 const db = require('../../db.js');
 const logger = require('../../logger.js');
-const redisClient = require('../../redis.js');
 const { EmbedBuilder } = require('discord.js');
+
+let whitelistCache = null;
+
+async function ensureCacheLoaded() {
+    if (whitelistCache !== null) return;
+    
+    try {
+        const result = await db.query('SELECT discord_id FROM users WHERE is_whitelisted = true');
+        whitelistCache = new Set(result.rows.map(row => row.discord_id));
+    } catch (error) {
+        logger.error(`Failed to hydrate whitelist cache from DB: ${error.stack}`);
+        whitelistCache = new Set();
+    }
+}
 
 module.exports = {
     name: 'whitelist',
@@ -16,39 +29,37 @@ module.exports = {
         }
     ],
 
+    whitelistCache,
+    ensureCacheLoaded,
+
     async execute(interaction) {
         await interaction.deferReply();
+        
         try {
             const senderId = interaction.user.id;
-            const showList = interaction.options.getBoolean('show_list');
-            
-            const whitelistCacheKey = `whitelist:${senderId}`;
+            const showList = interaction.options.getBoolean('show_list') ?? false;
 
-            const cachedWhitelist = await redisClient.get(whitelistCacheKey);
-            
-            let isWhitelisted = cachedWhitelist === 'true';
-
-            if (!cachedWhitelist) {
-                const status = await db.query(`SELECT is_whitelisted FROM users WHERE discord_id = $1`, [senderId]);
-                isWhitelisted = status.rows[0]?.is_whitelisted || false;
-
-                await redisClient.set(whitelistCacheKey, isWhitelisted.toString(), { EX: 300 });
-            }
+            await ensureCacheLoaded();
 
             let responseMessage = "";
 
-            if (isWhitelisted) {
+            if (whitelistCache.has(senderId)) {
                 responseMessage = 'You are already in the whitelist!';
             } else {
-                await db.query(`UPDATE users SET is_whitelisted = true WHERE discord_id = $1`, [senderId]);
-                await redisClient.set(whitelistCacheKey, 'true', { EX: 300 });
+                await db.query(`
+                    INSERT INTO users (discord_id, is_whitelisted)
+                    VALUES ($1, true)
+                    ON CONFLICT (discord_id)
+                    DO UPDATE SET is_whitelisted = true
+                `, [senderId]);
+
+                whitelistCache.add(senderId);
                 responseMessage = 'You have been added to the whitelist!';
             }
 
             if (showList) {
-                const result = await db.query('SELECT discord_id FROM users WHERE is_whitelisted = true');
-                const userList = result.rows.length > 0
-                    ? result.rows.map(row => `<@${row.discord_id}>`).join(`\n`)
+                const userList = whitelistCache.size > 0
+                    ? Array.from(whitelistCache).map(id => `<@${id}>`).join('\n')
                     : 'No whitelisted users found';
 
                 const embed = new EmbedBuilder()
@@ -63,11 +74,7 @@ module.exports = {
 
         } catch (error) {
             logger.error(`Error in /whitelist: ${error.stack}`);
-            if (!interaction.replied && !interaction.deferred) {
-                 await interaction.reply('An error occurred.');
-            } else {
-                 await interaction.editReply('Transaction failed.');
-            }
+            await interaction.editReply('An error occurred during processing.');
         }
     }
-}
+};

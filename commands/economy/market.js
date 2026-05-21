@@ -1,8 +1,9 @@
 const db = require('../../db.js');
-const redisClient = require('../../redis.js');
 const logger = require('../../logger.js');
 const modules = require('../../config/modules.js');
 const { EmbedBuilder } = require('discord.js');
+
+let marketDisplayCache = null;
 
 module.exports = {
     name: 'market',
@@ -13,16 +14,11 @@ module.exports = {
         await interaction.deferReply();
 
         try {
-            const cacheKey = 'system:market:display';
-            let marketDisplay = await redisClient.get(cacheKey);
-
-            if (!marketDisplay) {
-                marketDisplay = Object.entries(modules).map(([id, mod]) =>
+            if (!marketDisplayCache) {
+                marketDisplayCache = Object.entries(modules).map(([id, mod]) =>
                     `ID: ${id.padEnd(2)} | ${mod.name.padEnd(12)} | ${mod.price.toLocaleString().padStart(7)} Cores\n` +
                     `          > ${mod.desc}`
                 ).join('\n\n');
-
-                await redisClient.set(cacheKey, marketDisplay, { EX: 3600 });
             }
 
             const embed = new EmbedBuilder()
@@ -30,7 +26,7 @@ module.exports = {
                 .setDescription(
                     `\`>_\` [ SYSTEM MARKET ]: AVAILABLE MODULES\n` +
                     `--------------------------------------------\n` +
-                    `${marketDisplay}\n` +
+                    `${marketDisplayCache}\n` +
                     `--------------------------------------------\n` +
                     `USE: **/buy <ID>** to purchase a module`
                 );

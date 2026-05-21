@@ -1,7 +1,7 @@
 const db = require('../../db.js');
 const logger = require('../../logger.js');
-const redisClient = require('../../redis.js');
 const { EmbedBuilder } = require('discord.js');
+const whitelistCmd = require('./whitelist.js');
 
 module.exports = {
     name: 'pay',
@@ -23,22 +23,24 @@ module.exports = {
         if (amount <= 0) return interaction.reply({ content: "Amount must be at least 1 Core.", ephemeral: true });
 
         try {
+            await whitelistCmd.ensureCacheLoaded();
+            const isWhitelisted = whitelistCmd.whitelistCache.has(senderId);
+
             const res = await db.query(
-                'SELECT discord_id, coins, vault, is_whitelisted FROM users WHERE discord_id IN ($1, $2)',
+                'SELECT discord_id, coins FROM users WHERE discord_id IN ($1, $2)',
                 [senderId, targetId]
             );
 
-            const senderData = res.rows.find(r => r.discord_id === senderId) || { coins: 0, vault: 0, is_whitelisted: false };
-            const targetData = res.rows.find(r => r.discord_id === targetId) || { coins: 0, vault: 0 };
+            const senderData = res.rows.find(r => r.discord_id === senderId) || { coins: 0 };
 
-            const taxRate = senderData.is_whitelisted ? 0 : 0.10;
+            const taxRate = isWhitelisted ? 0 : 0.10;
             const taxAmount = Math.floor(amount * taxRate);
             const totalDeduction = amount + taxAmount;
 
             if (senderData.coins < totalDeduction) {
-                await deferPromise;
                 return interaction.reply(`Insufficient funds. You need **${totalDeduction}** Cores (including tax).`);
             }
+
             await db.query('BEGIN');
 
             await db.query('UPDATE users SET coins = coins - $1 WHERE discord_id = $2', [totalDeduction, senderId]);
@@ -57,26 +59,21 @@ module.exports = {
 
             await db.query('COMMIT');
 
-            const newSenderCoins = senderData.coins - totalDeduction;
-            const newTargetCoins = targetData.coins + amount;
-
-            const senderPayload = JSON.stringify({ coins: newSenderCoins, vault: senderData.vault });
-            const targetPayload = JSON.stringify({ coins: newTargetCoins, vault: targetData.vault });
-
-            redisClient.set(`profile:${senderId}`, senderPayload, { EX: 360 }).catch(e => logger.error(e));
-            redisClient.set(`profile:${targetId}`, targetPayload, { EX: 360 }).catch(e => logger.error(e));
-
             const embed = new EmbedBuilder()
                 .setColor(0x2b2d31)
                 .setDescription(`\`\`\`${interaction.user.displayName} transferred ${amount} Cores to ${targetUser.displayName}\nNetwork Fee: -${taxAmount} Cores\`\`\``)
-                .setFooter({ text: senderData.is_whitelisted ? 'Whitelist Active: 0% fee.' : 'A 10% network protocol fee applied.' });
+                .setFooter({ text: isWhitelisted ? 'Whitelist Active: 0% fee.' : 'A 10% network protocol fee applied.' });
             
             await interaction.reply({ embeds: [embed] });
 
         } catch (error) {
-            await db.query('ROLLBACK');
+            try { await db.query('ROLLBACK'); } catch (_) {}
             logger.error(`Error in /pay: ${error.stack}`);
-            await interaction.reply('Transaction failed! No cores were moved.');
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply('Transaction failed! No cores were moved.');
+            } else {
+                await interaction.reply('Transaction failed! No cores were moved.');
+            }
         }
     }
 };

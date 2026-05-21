@@ -1,5 +1,4 @@
 const db = require('../../db.js');
-const redisClient = require('../../redis.js');
 const logger = require('../../logger.js');
 const { EmbedBuilder } = require('discord.js');
 const { setTimeout } = require('node:timers/promises');
@@ -18,48 +17,47 @@ module.exports = {
     ],
 
     async execute(interaction) {
-
         const senderId = interaction.user.id;
         const targetUser = interaction.options.getUser('user');
         const targetId = targetUser.id;
 
         if (senderId === targetId) {
-            return interaction.reply(`You can't perform an attack on yourself!`);
+            return interaction.reply({ content: `You can't perform an attack on yourself!`, ephemeral: true });
         }
 
         try {
+            // Fetch current balances directly from the database
             const response = await db.query(
-                'SELECT discord_id, coins, vault FROM users WHERE discord_id IN ($1, $2)',
+                'SELECT discord_id, coins FROM users WHERE discord_id IN ($1, $2)',
                 [senderId, targetId]
             );
 
-            const senderData = response.rows.find(r => r.discord_id === senderId) || { coins: 100, vault: 0 };
-            const targetData = response.rows.find(r => r.discord_id === targetId) || { coins: 100, vault: 0 };
+            const senderData = response.rows.find(r => r.discord_id === senderId) || { coins: 100 };
+            const targetData = response.rows.find(r => r.discord_id === targetId) || { coins: 100 };
 
             const senderCores = senderData.coins;
             const targetCores = targetData.coins;
 
             if (senderCores <= 0) {
-                return interaction.reply(`You don't have enough Cores to perform an attack!`);
+                return interaction.reply({ content: `You don't have enough Cores to perform an attack!`, ephemeral: true });
             }
 
             if (targetCores < 100) {
-                return interaction.reply(`${targetUser.displayName} does not have enough Cores to target.`);
+                return interaction.reply({ content: `${targetUser.displayName} does not have enough Cores to target.`, ephemeral: true });
             }
 
+            // Send the initial progress message
             await interaction.reply('Initializing dictionary attack...');
             await setTimeout(3000);
 
             const successChance = Math.random() * 100;
             let statusMessage = '';
             let message = '';
-            let finalSenderCores = senderCores;
-            let finalTargetCores = targetCores;
 
             await db.query('BEGIN');
 
             if (successChance <= 40) {
-                statusMessage = '[SUCCESS] Access Granted';
+                statusMessage = '`[SUCCESS]` Access Granted';
                 const stealPercent = (Math.random() * (14 - 8) + 8) / 100;
                 let stolenAmount = Math.max(50, Math.floor(targetCores * stealPercent));
                 stolenAmount = Math.min(stolenAmount, targetCores);
@@ -67,39 +65,36 @@ module.exports = {
                 await db.query('UPDATE users SET coins = coins + $1 WHERE discord_id = $2', [stolenAmount, senderId]);
                 await db.query('UPDATE users SET coins = coins - $1 WHERE discord_id = $2', [stolenAmount, targetId]);
 
-                finalSenderCores += stolenAmount;
-                finalTargetCores -= stolenAmount;
                 message = `Extracted **${stolenAmount}** Cores from /home/${targetUser.displayName}/vault`;
             } else {
-                statusMessage = '[FAILED] Access Denied';
+                statusMessage = '`[FAILED]` Access Denied';
                 const finePercent = (Math.random() * (8 - 4) + 4) / 100;
                 let fineAmount = Math.max(25, Math.floor(targetCores * finePercent));
                 fineAmount = Math.min(fineAmount, senderCores);
 
                 await db.query('UPDATE users SET coins = coins - $1 WHERE discord_id = $2', [fineAmount, senderId]);
 
-                finalSenderCores -= fineAmount;
                 message = `Failed to exploit ${targetUser.displayName}'s vault.\nAuthorities traced your connection and fined you **${fineAmount}** Cores.`;
             }
 
             await db.query('COMMIT');
 
-            const senderKey = `profile:${senderId}`;
-            const targetKey = `profile:${targetId}`;
+            // Construct and update via editReply since the interaction was already answered
+            const embed = new EmbedBuilder()
+                .setColor(successChance <= 40 ? 0x00ff99 : 0xff4a4a)
+                .setDescription(`${statusMessage}\n${message}`);
 
-            const senderPayload = JSON.stringify({ coins: finalSenderCores, vault: senderData.vault });
-            const targetPayload = JSON.stringify({ coins: finalTargetCores, vault: targetData.vault });
-
-            redisClient.set(senderKey, senderPayload, { EX: 360 }).catch(e => logger.error(e));
-            redisClient.set(targetKey, targetPayload, { EX: 360 }).catch(e => logger.error(e));
-
-            const embed = new EmbedBuilder().setDescription(`${statusMessage}\n${message}`);
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ content: null, embeds: [embed] });
 
         } catch (error) {
-            await db.query('ROLLBACK');
+            try { await db.query('ROLLBACK'); } catch (_) {}
             logger.error(`Error in /ssh-crack: ${error.stack}`);
-            await interaction.reply('Transaction failed. No cores were moved.');
+            
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply({ content: 'Transaction failed. No cores were moved.', embeds: [] });
+            } else {
+                await interaction.reply({ content: 'Transaction failed. No cores were moved.', ephemeral: true });
+            }
         }
     }
 };
