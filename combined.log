@@ -1,4 +1,4 @@
-[2026-05-17 20:50:35] [[31merror[39m]: Unhandled Rejection at: [object Promise] | Reason: DiscordjsError [TokenInvalid]: An invalid token was provided.
+ [2026-05-17 20:50:35] [[31merror[39m]: Unhandled Rejection at: [object Promise] | Reason: DiscordjsError [TokenInvalid]: An invalid token was provided.
 [2026-05-17 20:50:55] [[32minfo[39m]: Received SIGINT. Starting graceful shutdown...
 [2026-05-17 20:50:59] [[32minfo[39m]: [DB] Initial connection warm-up successful.
 [2026-05-17 20:51:13] [[32minfo[39m]: [COMMANDS] User @qilli0510 (ID: 819197308200943616) triggered /ping in Guild "test new bot" (ID: 1070710331107725332)
